@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="ISO-8859-1">
+    <title>Buyers</title>
+    <link rel="stylesheet"
+          href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
+          integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO"
+          crossorigin="anonymous">
+</head>
+<body>
+<div class="container my-2" align="center">
+
+    <h3>Buyer List</h3>
+    <a th:href="@{/buyer/addnew}" class="btn btn-primary btn-sm mb-3" >Add buyer</a>
+    <table style="width:80%" border="1"
+           class = "table table-striped table-responsive-md">
+        <thead>
+        <tr>
+            <th>First name</th>
+            <th>Last name</th>
+            <th>Title</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="buyer:${buyerList}">
+            <td th:text="${buyer.firstName}"></td>
+            <td th:text="${buyer.lastName}"></td>
+            <td th:text="${buyer.title}"></td>
+            <td> <a th:href="@{/buyer/showFormForUpdate/{id}(id=${buyer.buyerId})}"
+                    class="btn btn-primary">Update</a>
+                <a th:href="@{/buyer/deleteBuyer/{id}(id=${buyer.buyerId})}"
+                   class="btn btn-danger">Delete</a>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>
