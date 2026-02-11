@@ -27,10 +27,12 @@ public class ProductController {
     @GetMapping
     public ResponseEntity<ProductListResponse> getAllProducts(
             @Parameter(description = "Number of items to return") @RequestParam(defaultValue = "10") Integer limit,
-            @Parameter(description = "Number of items to skip") @RequestParam(defaultValue = "0") Integer skip) {
+            @Parameter(description = "Number of items to skip") @RequestParam(defaultValue = "0") Integer skip,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(defaultValue = "asc") String order) {
 
         Long userId = getCurrentUserId();
-        ProductListResponse response = productService.getAllProducts(limit, skip, userId);
+        ProductListResponse response = productService.getAllProducts(limit, skip, sortBy, order, userId);
         return ResponseEntity.ok(response);
     }
 

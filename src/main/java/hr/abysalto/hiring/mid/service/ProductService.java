@@ -2,6 +2,7 @@ package hr.abysalto.hiring.mid.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import hr.abysalto.hiring.mid.domain.Favorite;
 import hr.abysalto.hiring.mid.domain.Product;
 import hr.abysalto.hiring.mid.dto.response.ProductListResponse;
 import hr.abysalto.hiring.mid.dto.response.ProductResponse;
@@ -14,6 +15,8 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,21 +29,40 @@ public class ProductService {
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Cacheable(value = "products", key = "#limit + '_' + #skip")
-    public ProductListResponse getAllProducts(Integer limit, Integer skip, Long userId) {
-        String url = String.format("%s/products?limit=%d&skip=%d", dummyJsonBaseUrl, limit, skip);
+    @Cacheable(value = "products", key = "#limit + '_' + #skip + '_' + #sortBy + '_' + #order + '_' + #userId")
+    public ProductListResponse getAllProducts(Integer limit, Integer skip, String sortBy, String order, Long userId) {
+        StringBuilder urlBuilder = new StringBuilder(String.format("%s/products?limit=%d&skip=%d", dummyJsonBaseUrl, limit, skip));
+
+        if (sortBy != null && !sortBy.isEmpty()) {
+            urlBuilder.append("&sortBy=").append(sortBy);
+            urlBuilder.append("&order=").append(order != null ? order : "asc");
+        }
+
+        String url = urlBuilder.toString();
 
         try {
             String response = restTemplate.getForObject(url, String.class);
             JsonNode root = objectMapper.readTree(response);
-
-            List<ProductResponse> products = new ArrayList<>();
             JsonNode productsArray = root.get("products");
 
-            for (JsonNode productNode : productsArray) {
-                Product product = objectMapper.treeToValue(productNode, Product.class);
-                ProductResponse productResponse = mapToResponse(product, userId);
-                products.add(productResponse);
+            Set<Long> favoriteProductIds = Set.of();
+            if (userId != null) {
+                favoriteProductIds = favoriteRepository.findByUserId(userId)
+                        .stream()
+                        .map(Favorite::getProductId)
+                        .collect(Collectors.toSet());
+            }
+
+            List<ProductResponse> products = new ArrayList<>();
+            if (productsArray != null && productsArray.isArray()) {
+                for (JsonNode productNode : productsArray) {
+                    Product product = objectMapper.treeToValue(productNode, Product.class);
+
+                    boolean isFavorite = favoriteProductIds.contains(product.getId());
+
+                    ProductResponse productResponse = mapToResponse(product, isFavorite);
+                    products.add(productResponse);
+                }
             }
 
             return ProductListResponse.builder()
@@ -55,14 +77,20 @@ public class ProductService {
         }
     }
 
-    @Cacheable(value = "product", key = "#productId")
+    @Cacheable(value = "product", key = "#productId + '_' + #userId")
     public ProductResponse getProductById(Long productId, Long userId) {
         String url = String.format("%s/products/%d", dummyJsonBaseUrl, productId);
 
         try {
             String response = restTemplate.getForObject(url, String.class);
             Product product = objectMapper.readValue(response, Product.class);
-            return mapToResponse(product, userId);
+
+            boolean isFavorite = false;
+            if (userId != null) {
+                isFavorite = favoriteRepository.existsByUserIdAndProductId(userId, productId);
+            }
+
+            return mapToResponse(product, isFavorite);
 
         } catch (Exception e) {
             throw new RuntimeException("Failed to fetch product from DummyJSON API", e);
@@ -75,13 +103,21 @@ public class ProductService {
         try {
             String response = restTemplate.getForObject(url, String.class);
             JsonNode root = objectMapper.readTree(response);
-
-            List<ProductResponse> products = new ArrayList<>();
             JsonNode productsArray = root.get("products");
 
+            Set<Long> favoriteProductIds = Set.of();
+            if (userId != null) {
+                favoriteProductIds = favoriteRepository.findByUserId(userId)
+                        .stream()
+                        .map(Favorite::getProductId)
+                        .collect(Collectors.toSet());
+            }
+
+            List<ProductResponse> products = new ArrayList<>();
             for (JsonNode productNode : productsArray) {
                 Product product = objectMapper.treeToValue(productNode, Product.class);
-                ProductResponse productResponse = mapToResponse(product, userId);
+                boolean isFavorite = favoriteProductIds.contains(product.getId());
+                ProductResponse productResponse = mapToResponse(product, isFavorite);
                 products.add(productResponse);
             }
 
@@ -97,12 +133,7 @@ public class ProductService {
         }
     }
 
-    private ProductResponse mapToResponse(Product product, Long userId) {
-        boolean isFavorite = false;
-        if (userId != null) {
-            isFavorite = favoriteRepository.existsByUserIdAndProductId(userId, product.getId());
-        }
-
+    private ProductResponse mapToResponse(Product product, boolean isFavorite) {
         return ProductResponse.builder()
                 .id(product.getId())
                 .title(product.getTitle())
