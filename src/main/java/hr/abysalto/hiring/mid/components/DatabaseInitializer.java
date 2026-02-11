@@ -24,7 +24,7 @@ public class DatabaseInitializer {
 	private void initTables() {
 
 		this.jdbcTemplate.execute("""
-			 CREATE TABLE USERS (
+			 CREATE TABLE IF NOT EXISTS USERS (
 				 ID BIGINT AUTO_INCREMENT PRIMARY KEY,
 				 USERNAME VARCHAR(50) UNIQUE NOT NULL,
 				 PASSWORD VARCHAR(255) NOT NULL,
@@ -37,7 +37,7 @@ public class DatabaseInitializer {
  		""");
 
 		this.jdbcTemplate.execute("""
-			 CREATE TABLE CART_ITEMS (
+			 CREATE TABLE IF NOT EXISTS CART_ITEMS (
 				 ID BIGINT AUTO_INCREMENT PRIMARY KEY,
 				 USER_ID BIGINT NOT NULL,
 				 PRODUCT_ID BIGINT NOT NULL,
@@ -50,7 +50,7 @@ public class DatabaseInitializer {
  		""");
 
 		this.jdbcTemplate.execute("""
-			 CREATE TABLE FAVORITES (
+			 CREATE TABLE IF NOT EXISTS FAVORITES (
 				 ID BIGINT AUTO_INCREMENT PRIMARY KEY,
 				 USER_ID BIGINT NOT NULL,
 				 PRODUCT_ID BIGINT NOT NULL,
@@ -61,7 +61,7 @@ public class DatabaseInitializer {
  		""");
 
 		this.jdbcTemplate.execute("""
-			 CREATE TABLE BUYER (
+			 CREATE TABLE IF NOT EXISTS BUYER (
 				 BUYER_ID INT AUTO_INCREMENT PRIMARY KEY,
 				 FIRST_NAME VARCHAR(100) NOT NULL,
 				 LAST_NAME VARCHAR(100) NOT NULL,
